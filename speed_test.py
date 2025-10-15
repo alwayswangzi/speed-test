@@ -5,6 +5,8 @@ import os
 import time
 import logging
 import json
+import socket
+import requests
 from typing import Dict, Generator, Any, List, Tuple
 from flask import Flask, render_template, jsonify, request, Response
 from datetime import datetime
@@ -32,6 +34,41 @@ DEFAULT_SIZE = "50m"     # 默认文件大小
 
 # Ping测试配置
 PING_TEST_COUNT = 5    # ping测试次数
+
+# 网站连通性测试配置
+WEBSITE_TEST_TIMEOUT = 10  # 网站测试超时时间（秒）
+COMMON_WEBSITES = {
+    "google": {
+        "name": "Google",
+        "url": "https://www.google.com",
+        "description": "全球最大搜索引擎"
+    },
+    "youtube": {
+        "name": "YouTube", 
+        "url": "https://www.youtube.com",
+        "description": "全球最大视频平台"
+    },
+    "telegram": {
+        "name": "Telegram",
+        "url": "https://web.telegram.org",
+        "description": "即时通讯应用"
+    },
+    "github": {
+        "name": "GitHub",
+        "url": "https://github.com",
+        "description": "代码托管平台"
+    },
+    "stackoverflow": {
+        "name": "Stack Overflow",
+        "url": "https://stackoverflow.com",
+        "description": "程序员问答社区"
+    },
+    "baidu": {
+        "name": "百度",
+        "url": "https://www.baidu.com",
+        "description": "中国最大搜索引擎"
+    }
+}
 
 
 def generate_random_data_stream(file_size: int) -> Generator[bytes, None, None]:
@@ -61,6 +98,105 @@ def generate_random_data_stream(file_size: int) -> Generator[bytes, None, None]:
             break
 
 
+
+
+def test_website_connectivity(url: str, timeout: int = WEBSITE_TEST_TIMEOUT) -> Dict[str, Any]:
+    """
+    测试网站连通性和响应时间
+    
+    Args:
+        url: 要测试的网站URL
+        timeout: 超时时间（秒）
+        
+    Returns:
+        Dict: 测试结果
+    """
+    result = {
+        "url": url,
+        "accessible": False,
+        "response_time_ms": 0,
+        "status_code": None,
+        "error": None,
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    try:
+        start_time = time.time()
+        response = requests.get(url, timeout=timeout, allow_redirects=True)
+        end_time = time.time()
+        
+        response_time = (end_time - start_time) * 1000  # 转换为毫秒
+        
+        result.update({
+            "accessible": True,
+            "response_time_ms": round(response_time, 2),
+            "status_code": response.status_code
+        })
+        
+        logger.info(f"网站连通性测试成功: {url} - {response_time:.2f}ms (状态码: {response.status_code})")
+        
+    except requests.exceptions.Timeout:
+        result["error"] = "连接超时"
+        logger.warning(f"网站连通性测试超时: {url}")
+    except requests.exceptions.ConnectionError:
+        result["error"] = "连接失败"
+        logger.warning(f"网站连通性测试连接失败: {url}")
+    except requests.exceptions.RequestException as e:
+        result["error"] = f"请求错误: {str(e)}"
+        logger.warning(f"网站连通性测试请求错误: {url} - {e}")
+    except Exception as e:
+        result["error"] = f"未知错误: {str(e)}"
+        logger.error(f"网站连通性测试未知错误: {url} - {e}")
+    
+    return result
+
+
+def test_all_websites() -> Dict[str, Any]:
+    """
+    测试所有配置的网站连通性
+    
+    Returns:
+        Dict: 所有网站的测试结果
+    """
+    results = {
+        "websites": {},
+        "summary": {
+            "total": len(COMMON_WEBSITES),
+            "accessible": 0,
+            "failed": 0,
+            "average_response_time": 0
+        },
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    accessible_count = 0
+    total_response_time = 0
+    
+    for key, site_info in COMMON_WEBSITES.items():
+        logger.info(f"开始测试网站: {site_info['name']} ({site_info['url']})")
+        
+        test_result = test_website_connectivity(site_info['url'])
+        test_result.update({
+            "name": site_info['name'],
+            "description": site_info['description']
+        })
+        
+        results["websites"][key] = test_result
+        
+        if test_result["accessible"]:
+            accessible_count += 1
+            total_response_time += test_result["response_time_ms"]
+    
+    # 计算汇总信息
+    results["summary"]["accessible"] = accessible_count
+    results["summary"]["failed"] = len(COMMON_WEBSITES) - accessible_count
+    
+    if accessible_count > 0:
+        results["summary"]["average_response_time"] = round(total_response_time / accessible_count, 2)
+    
+    logger.info(f"网站连通性测试完成: {accessible_count}/{len(COMMON_WEBSITES)} 个网站可访问")
+    
+    return results
 
 
 def calculate_ping_stats(pings: List[float]) -> Dict[str, float]:
@@ -205,6 +341,49 @@ def ping():
     
     logger.info(f"Ping测试: {response_time:.2f}ms")
     return jsonify(response_data)
+
+
+@app.route("/api/website-test")
+def website_test():
+    """
+    测试常用网站的连通性和延时
+    
+    Returns:
+        JSON: 网站连通性测试结果
+    """
+    logger.info("开始网站连通性测试")
+    
+    try:
+        results = test_all_websites()
+        logger.info(f"网站连通性测试完成: {results['summary']['accessible']}/{results['summary']['total']} 个网站可访问")
+        return jsonify(results)
+    except Exception as e:
+        logger.error(f"网站连通性测试失败: {e}")
+        return jsonify({
+            "error": f"网站连通性测试失败: {str(e)}",
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+
+@app.route("/api/websites")
+def get_websites():
+    """
+    返回所有可测试的网站列表
+    
+    Returns:
+        JSON: 网站列表
+    """
+    websites = []
+    for key, site_info in COMMON_WEBSITES.items():
+        websites.append({
+            "key": key,
+            "name": site_info['name'],
+            "url": site_info['url'],
+            "description": site_info['description']
+        })
+    
+    logger.info(f"返回 {len(websites)} 个可测试网站")
+    return jsonify({"websites": websites})
 
 
 @app.errorhandler(404)

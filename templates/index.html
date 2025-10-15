@@ -79,6 +79,14 @@
             box-shadow: 0 8px 25px rgba(40, 167, 69, 0.6);
         }
 
+        .website-test-button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        }
+
+        .website-test-button:hover {
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
+        }
+
         .progress-container {
             margin: 20px 0;
             display: none;
@@ -190,6 +198,118 @@
             margin: 20px 0;
         }
 
+        .website-test-card {
+            background: #fff5f5;
+            border-left: 5px solid #ff6b6b;
+        }
+
+        .website-test-card .result-label {
+            color: #c62828;
+        }
+
+        .website-test-card .result-value {
+            color: #b71c1c;
+        }
+
+        .website-summary {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .summary-label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        .summary-value {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .website-list {
+            margin-top: 20px;
+        }
+
+        .website-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin: 10px 0;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #ddd;
+        }
+
+        .website-item.accessible {
+            border-left-color: #4caf50;
+        }
+
+        .website-item.failed {
+            border-left-color: #f44336;
+        }
+
+        .website-info {
+            flex: 1;
+        }
+
+        .website-name {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .website-url {
+            color: #666;
+            font-size: 0.9em;
+            word-break: break-all;
+        }
+
+        .website-status {
+            text-align: right;
+            min-width: 120px;
+        }
+
+        .status-accessible {
+            color: #4caf50;
+            font-weight: bold;
+        }
+
+        .status-failed {
+            color: #f44336;
+            font-weight: bold;
+        }
+
+        .response-time {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .error-message {
+            color: #f44336;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
         .error-message {
             background: #ffebee;
             color: #c62828;
@@ -291,6 +411,9 @@
             <button class="test-button" id="testButton" onclick="startCombinedTest()">
                 🚀 开始网络测试
             </button>
+            <button class="test-button website-test-button" id="websiteTestButton" onclick="startWebsiteTest()">
+                🌐 测试网站连通性
+            </button>
         </div>
 
         <div class="progress-container" id="progressContainer">
@@ -362,6 +485,27 @@
                 <span class="result-value" id="pingJitter"></span>
             </div>
         </div>
+
+        <div class="result-card website-test-card" id="websiteTestResultCard">
+            <h3>🌐 网站连通性测试结果</h3>
+            <div class="website-summary" id="websiteSummary">
+                <div class="summary-item">
+                    <span class="summary-label">总测试网站:</span>
+                    <span class="summary-value" id="totalWebsites"></span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">可访问网站:</span>
+                    <span class="summary-value" id="accessibleWebsites"></span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">平均响应时间:</span>
+                    <span class="summary-value" id="averageResponseTime"></span>
+                </div>
+            </div>
+            <div class="website-list" id="websiteList">
+                <!-- 网站测试结果列表将通过JavaScript动态生成 -->
+            </div>
+        </div>
     </div>
 
     <script>
@@ -372,6 +516,7 @@
         let selectedFileSize = '50m'; // 默认选择50MB
         let availableSizes = [];
         let pingResults = []; // 存储ping测试结果
+        let websiteTestResults = null; // 存储网站测试结果
 
         // 页面加载时获取文件大小选项
         window.onload = function() {
@@ -737,6 +882,95 @@
             pingResultCard.style.display = 'block';
             
             console.log('Ping测试结果:', data);
+        }
+
+        async function startWebsiteTest() {
+            const websiteTestButton = document.getElementById('websiteTestButton');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const websiteTestResultCard = document.getElementById('websiteTestResultCard');
+
+            // 重置状态
+            websiteTestButton.disabled = true;
+            websiteTestButton.innerHTML = '<span class="loading"></span>测试网站连通性中...';
+            progressContainer.style.display = 'block';
+            websiteTestResultCard.style.display = 'none';
+            progressFill.style.width = '0%';
+            progressText.textContent = '准备测试网站连通性...';
+
+            try {
+                // 开始网站连通性测试
+                progressFill.style.width = '50%';
+                progressText.textContent = '正在测试网站连通性...';
+                
+                const response = await fetch('/speed-test/api/website-test');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    websiteTestResults = data;
+                    displayWebsiteTestResults(data);
+                    
+                    progressFill.style.width = '100%';
+                    progressText.textContent = '网站连通性测试完成！';
+                } else {
+                    throw new Error(data.error || '网站连通性测试失败');
+                }
+                
+            } catch (error) {
+                showError('网站连通性测试失败: ' + error.message);
+                progressText.textContent = '网站连通性测试失败';
+            } finally {
+                // 恢复按钮状态
+                websiteTestButton.disabled = false;
+                websiteTestButton.innerHTML = '🌐 重新测试网站连通性';
+            }
+        }
+
+        function displayWebsiteTestResults(data) {
+            const websiteTestResultCard = document.getElementById('websiteTestResultCard');
+            const totalWebsites = document.getElementById('totalWebsites');
+            const accessibleWebsites = document.getElementById('accessibleWebsites');
+            const averageResponseTime = document.getElementById('averageResponseTime');
+            const websiteList = document.getElementById('websiteList');
+
+            // 显示汇总信息
+            const summary = data.summary;
+            totalWebsites.textContent = summary.total + ' 个';
+            accessibleWebsites.textContent = summary.accessible + ' 个';
+            averageResponseTime.textContent = summary.average_response_time ? 
+                summary.average_response_time + ' ms' : 'N/A';
+
+            // 生成网站列表
+            websiteList.innerHTML = '';
+            for (const [key, website] of Object.entries(data.websites)) {
+                const websiteItem = document.createElement('div');
+                websiteItem.className = `website-item ${website.accessible ? 'accessible' : 'failed'}`;
+                
+                const statusClass = website.accessible ? 'status-accessible' : 'status-failed';
+                const statusText = website.accessible ? '可访问' : '无法访问';
+                const responseTimeText = website.accessible ? 
+                    `响应时间: ${website.response_time_ms} ms` : 
+                    `错误: ${website.error || '未知错误'}`;
+                
+                websiteItem.innerHTML = `
+                    <div class="website-info">
+                        <div class="website-name">${website.name}</div>
+                        <div class="website-url">${website.url}</div>
+                    </div>
+                    <div class="website-status">
+                        <div class="${statusClass}">${statusText}</div>
+                        <div class="${website.accessible ? 'response-time' : 'error-message'}">${responseTimeText}</div>
+                    </div>
+                `;
+                
+                websiteList.appendChild(websiteItem);
+            }
+
+            // 显示结果卡片
+            websiteTestResultCard.style.display = 'block';
+            
+            console.log('网站连通性测试结果:', data);
         }
     </script>
 </body>
