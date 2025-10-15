@@ -413,7 +413,7 @@
 
         async function loadFileSizes() {
             try {
-                const response = await fetch('/api/file-sizes');
+                const response = await fetch('/speed-test/api/file-sizes');
                 const data = await response.json();
                 availableSizes = data.sizes;
                 renderFileSizeOptions();
@@ -486,7 +486,7 @@
 
         async function loadTestInfo() {
             try {
-                const response = await fetch(`/api/test-info?size=${selectedFileSize}`);
+                const response = await fetch(`/speed-test/api/test-info?size=${selectedFileSize}`);
                 testInfo = await response.json();
             } catch (error) {
                 showError('无法加载测试文件信息: ' + error.message);
@@ -623,7 +623,7 @@
             latencyStatus.textContent = '测试中...';
             latencyStatus.className = 'status-value running';
             
-            const response = await fetch('/api/latency-test');
+            const response = await fetch('/speed-test/api/latency-test');
             const data = await response.json();
             
             if (!response.ok) {
