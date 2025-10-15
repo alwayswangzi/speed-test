@@ -38,29 +38,6 @@
             font-weight: 300;
         }
 
-        .info-card {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 25px;
-            margin: 25px 0;
-            border-left: 5px solid #667eea;
-        }
-
-        .info-item {
-            display: flex;
-            justify-content: space-between;
-            margin: 10px 0;
-            font-size: 1.1em;
-        }
-
-        .info-label {
-            font-weight: 600;
-            color: #555;
-        }
-
-        .info-value {
-            color: #333;
-        }
 
         .test-button {
             background: linear-gradient(45deg, #667eea, #764ba2);
@@ -309,16 +286,6 @@
             </div>
         </div>
 
-        <div class="info-card">
-            <div class="info-item">
-                <span class="info-label">当前选择:</span>
-                <span class="info-value" id="selectedSize">请选择文件大小</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">测试文件名称:</span>
-                <span class="info-value" id="fileName">-</span>
-            </div>
-        </div>
 
         <div class="test-buttons">
             <button class="test-button" id="testButton" onclick="startCombinedTest()">
@@ -398,7 +365,6 @@
     </div>
 
     <script>
-        let testInfo = null;
         let downloadStartTime = null;
         let downloadEndTime = null;
         let downloadedBytes = 0;
@@ -477,22 +443,9 @@
                 targetOption.classList.add('selected');
             }
             
-            // 更新信息显示
-            const size = availableSizes.find(s => s.key === sizeKey);
-            if (size) {
-                document.getElementById('selectedSize').textContent = size.display_name;
-                document.getElementById('fileName').textContent = `test_data_${sizeKey}.bin`;
-            }
+            // 文件大小选择完成
         }
 
-        async function loadTestInfo() {
-            try {
-                const response = await fetch(`/speed-test/api/test-info?size=${selectedFileSize}`);
-                testInfo = await response.json();
-            } catch (error) {
-                showError('无法加载测试文件信息: ' + error.message);
-            }
-        }
 
         function showError(message) {
             const errorDiv = document.getElementById('errorMessage');
@@ -532,13 +485,6 @@
         }
 
         async function startCombinedTest() {
-            // 先加载当前选择的文件信息
-            await loadTestInfo();
-            
-            if (!testInfo) {
-                showError('测试文件信息未加载，请刷新页面重试');
-                return;
-            }
 
             const testButton = document.getElementById('testButton');
             const progressContainer = document.getElementById('progressContainer');
@@ -717,7 +663,7 @@
             // 开始下载，传递文件大小参数
             const response = await fetch(`/speed-test/download?size=${selectedFileSize}`);
             const reader = response.body.getReader();
-            const contentLength = parseInt(response.headers.get('content-length') || testInfo.file_size);
+            const contentLength = parseInt(response.headers.get('content-length') || '0');
 
             downloadStartTime = performance.now();
             progressText.textContent = '正在下载...';

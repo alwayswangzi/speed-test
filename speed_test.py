@@ -61,24 +61,6 @@ def generate_random_data_stream(file_size: int) -> Generator[bytes, None, None]:
             break
 
 
-def get_file_size_info(file_size_key: str) -> Dict[str, Any]:
-    """
-    获取文件大小信息
-    
-    Args:
-        file_size_key: 文件大小标识符
-        
-    Returns:
-        Dict: 包含文件大小信息的字典
-    """
-    file_size = FILE_SIZES.get(file_size_key, FILE_SIZES[DEFAULT_SIZE])
-    
-    return {
-        "file_size": file_size,
-        "file_size_mb": round(file_size / (1024 * 1024), 2),
-        "file_name": f"test_data_{file_size_key}.bin",
-        "file_size_key": file_size_key,
-    }
 
 
 def calculate_ping_stats(pings: List[float]) -> Dict[str, float]:
@@ -175,20 +157,6 @@ def download_file():
     return response
 
 
-@app.route("/api/test-info")
-def test_info():
-    """
-    返回测试文件信息
-    
-    Query Parameters:
-        size: 文件大小标识符 (默认: 50m)
-        
-    Returns:
-        JSON: 文件信息
-    """
-    file_size_key = request.args.get("size", DEFAULT_SIZE)
-    logger.info(f"获取文件信息: {file_size_key}")
-    return jsonify(get_file_size_info(file_size_key))
 
 
 @app.route("/api/file-sizes")
