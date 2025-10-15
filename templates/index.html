@@ -642,7 +642,7 @@
             speedStatus.className = 'status-value running';
             
             // 开始下载，传递文件大小参数
-            const response = await fetch(`/download?size=${selectedFileSize}`);
+            const response = await fetch(`/speed-test/download?size=${selectedFileSize}`);
             const reader = response.body.getReader();
             const contentLength = parseInt(response.headers.get('content-length') || testInfo.file_size);
 
