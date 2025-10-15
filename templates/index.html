@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>下载速度测试工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+
+        .info-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 25px 0;
+            border-left: 5px solid #667eea;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .info-value {
+            color: #333;
+        }
+
+        .test-button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        }
+
+        .test-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .test-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .latency-button {
+            background: linear-gradient(45deg, #28a745, #20c997);
+        }
+
+        .latency-button:hover {
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.6);
+        }
+
+        .progress-container {
+            margin: 20px 0;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .test-status {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .status-value {
+            color: #333;
+            font-weight: bold;
+        }
+
+        .status-value.running {
+            color: #2196f3;
+        }
+
+        .status-value.completed {
+            color: #4caf50;
+        }
+
+        .status-value.error {
+            color: #f44336;
+        }
+
+        .result-card {
+            background: #e8f5e8;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 25px 0;
+            border-left: 5px solid #4caf50;
+            display: none;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 15px 0;
+            font-size: 1.2em;
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: #2e7d32;
+        }
+
+        .result-value {
+            color: #1b5e20;
+            font-weight: bold;
+        }
+
+        .speed-display {
+            font-size: 2em;
+            color: #4caf50;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .latency-card {
+            background: #e8f4fd;
+            border-left: 5px solid #2196f3;
+        }
+
+        .latency-card .result-label {
+            color: #1565c0;
+        }
+
+        .latency-card .result-value {
+            color: #0d47a1;
+        }
+
+        .latency-display {
+            font-size: 2em;
+            color: #2196f3;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .file-size-selector {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 25px 0;
+            border-left: 5px solid #28a745;
+        }
+
+        .file-size-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .file-size-option {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .file-size-option:hover {
+            border-color: #28a745;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.2);
+        }
+
+        .file-size-option.selected {
+            border-color: #28a745;
+            background: #e8f5e8;
+        }
+
+        .file-size-option.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 5px;
+            right: 8px;
+            color: #28a745;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .file-size-label {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .file-size-desc {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 下载速度测试工具</h1>
+        
+        <div class="file-size-selector">
+            <h3>📁 选择测试文件大小</h3>
+            <div class="file-size-options" id="fileSizeOptions">
+                <!-- 文件大小选项将通过JavaScript动态加载 -->
+            </div>
+        </div>
+
+        <div class="info-card">
+            <div class="info-item">
+                <span class="info-label">当前选择:</span>
+                <span class="info-value" id="selectedSize">请选择文件大小</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">测试文件名称:</span>
+                <span class="info-value" id="fileName">-</span>
+            </div>
+        </div>
+
+        <div class="test-buttons">
+            <button class="test-button" id="testButton" onclick="startCombinedTest()">
+                🚀 开始综合网络测试
+            </button>
+        </div>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p id="progressText">准备测试...</p>
+        </div>
+
+        <div class="test-status" id="testStatus">
+            <div class="status-item">
+                <span class="status-label">⏱️ 时延测试:</span>
+                <span class="status-value" id="latencyStatus">等待中...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">📊 下载测试:</span>
+                <span class="status-value" id="speedStatus">等待中...</span>
+            </div>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="result-card" id="resultCard">
+            <h3>📊 下载速度测试结果</h3>
+            <div class="speed-display" id="speedDisplay"></div>
+            <div class="result-item">
+                <span class="result-label">下载时间:</span>
+                <span class="result-value" id="downloadTime"></span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">文件大小:</span>
+                <span class="result-value" id="fileSizeResult"></span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">平均速度:</span>
+                <span class="result-value" id="averageSpeed"></span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">峰值速度:</span>
+                <span class="result-value" id="peakSpeed"></span>
+            </div>
+        </div>
+
+        <div class="result-card latency-card" id="latencyResultCard">
+            <h3>⏱️ 网络时延测试结果</h3>
+            <div class="latency-display" id="latencyDisplay"></div>
+            <div class="result-item">
+                <span class="result-label">测试次数:</span>
+                <span class="result-value" id="testCount"></span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">最小时延:</span>
+                <span class="result-value" id="minLatency"></span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">最大时延:</span>
+                <span class="result-value" id="maxLatency"></span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">平均时延:</span>
+                <span class="result-value" id="avgLatency"></span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">中位数时延:</span>
+                <span class="result-value" id="medianLatency"></span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">网络抖动:</span>
+                <span class="result-value" id="jitter"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let testInfo = null;
+        let downloadStartTime = null;
+        let downloadEndTime = null;
+        let downloadedBytes = 0;
+        let speedMeasurements = [];
+        let selectedFileSize = '50m'; // 默认选择50MB
+        let availableSizes = [];
+
+        // 页面加载时获取文件大小选项
+        window.onload = function() {
+            loadFileSizes();
+        };
+
+        async function loadFileSizes() {
+            try {
+                const response = await fetch('/api/file-sizes');
+                const data = await response.json();
+                availableSizes = data.sizes;
+                renderFileSizeOptions();
+                selectFileSize('50m'); // 默认选择50MB
+            } catch (error) {
+                showError('无法加载文件大小选项: ' + error.message);
+            }
+        }
+
+        function renderFileSizeOptions() {
+            const container = document.getElementById('fileSizeOptions');
+            container.innerHTML = '';
+            
+            availableSizes.forEach(size => {
+                const option = document.createElement('div');
+                option.className = 'file-size-option';
+                option.onclick = (event) => selectFileSize(size.key, event.target);
+                
+                option.innerHTML = `
+                    <div class="file-size-label">${size.display_name}</div>
+                    <div class="file-size-desc">${getSizeDescription(size.key)}</div>
+                `;
+                
+                container.appendChild(option);
+            });
+        }
+
+        function getSizeDescription(key) {
+            const descriptions = {
+                '1m': '快速测试',
+                '10m': '标准测试',
+                '50m': '详细测试',
+                '100m': '压力测试'
+            };
+            return descriptions[key] || '';
+        }
+
+        function selectFileSize(sizeKey, targetElement = null) {
+            selectedFileSize = sizeKey;
+            
+            // 更新UI选中状态
+            document.querySelectorAll('.file-size-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            // 如果提供了目标元素，使用它；否则通过key查找
+            let targetOption;
+            if (targetElement) {
+                targetOption = targetElement.closest('.file-size-option');
+            } else {
+                // 通过key查找对应的选项
+                const options = document.querySelectorAll('.file-size-option');
+                const sizeIndex = availableSizes.findIndex(s => s.key === sizeKey);
+                if (sizeIndex >= 0 && options[sizeIndex]) {
+                    targetOption = options[sizeIndex];
+                }
+            }
+            
+            if (targetOption) {
+                targetOption.classList.add('selected');
+            }
+            
+            // 更新信息显示
+            const size = availableSizes.find(s => s.key === sizeKey);
+            if (size) {
+                document.getElementById('selectedSize').textContent = size.display_name;
+                document.getElementById('fileName').textContent = `test_data_${sizeKey}.bin`;
+            }
+        }
+
+        async function loadTestInfo() {
+            try {
+                const response = await fetch(`/api/test-info?size=${selectedFileSize}`);
+                testInfo = await response.json();
+            } catch (error) {
+                showError('无法加载测试文件信息: ' + error.message);
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatSpeed(bytesPerSecond) {
+            if (bytesPerSecond === 0) return '0 B/s';
+            const k = 1024;
+            const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+            const i = Math.floor(Math.log(bytesPerSecond) / Math.log(k));
+            return parseFloat((bytesPerSecond / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatTime(seconds) {
+            if (seconds < 1) {
+                return (seconds * 1000).toFixed(0) + ' ms';
+            } else if (seconds < 60) {
+                return seconds.toFixed(2) + ' 秒';
+            } else {
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = seconds % 60;
+                return minutes + ' 分 ' + remainingSeconds.toFixed(2) + ' 秒';
+            }
+        }
+
+        async function startCombinedTest() {
+            // 先加载当前选择的文件信息
+            await loadTestInfo();
+            
+            if (!testInfo) {
+                showError('测试文件信息未加载，请刷新页面重试');
+                return;
+            }
+
+            const testButton = document.getElementById('testButton');
+            const progressContainer = document.getElementById('progressContainer');
+            const testStatus = document.getElementById('testStatus');
+            const resultCard = document.getElementById('resultCard');
+            const latencyResultCard = document.getElementById('latencyResultCard');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const latencyStatus = document.getElementById('latencyStatus');
+            const speedStatus = document.getElementById('speedStatus');
+
+            // 重置状态
+            testButton.disabled = true;
+            testButton.innerHTML = '<span class="loading"></span>综合测试中...';
+            progressContainer.style.display = 'block';
+            testStatus.style.display = 'block';
+            resultCard.style.display = 'none';
+            latencyResultCard.style.display = 'none';
+            progressFill.style.width = '0%';
+            progressText.textContent = '准备综合测试...';
+            
+            // 重置状态显示
+            latencyStatus.textContent = '等待中...';
+            latencyStatus.className = 'status-value';
+            speedStatus.textContent = '等待中...';
+            speedStatus.className = 'status-value';
+
+            // 重置测量数据
+            downloadStartTime = null;
+            downloadEndTime = null;
+            downloadedBytes = 0;
+            speedMeasurements = [];
+
+            let latencyTestCompleted = false;
+            let speedTestCompleted = false;
+
+            try {
+                // 同时开始两个测试
+                const latencyPromise = runLatencyTest();
+                const speedPromise = runSpeedTest();
+
+                // 等待两个测试完成
+                const [latencyResult, speedResult] = await Promise.allSettled([latencyPromise, speedPromise]);
+
+                // 处理时延测试结果
+                if (latencyResult.status === 'fulfilled') {
+                    displayLatencyResults(latencyResult.value);
+                    latencyStatus.textContent = '完成';
+                    latencyStatus.className = 'status-value completed';
+                } else {
+                    latencyStatus.textContent = '失败';
+                    latencyStatus.className = 'status-value error';
+                    console.error('时延测试失败:', latencyResult.reason);
+                }
+
+                // 处理下载测试结果
+                if (speedResult.status === 'fulfilled') {
+                    const { totalTime, downloadedBytes, averageSpeed, peakSpeed } = speedResult.value;
+                    displayResults(totalTime, downloadedBytes, averageSpeed, peakSpeed);
+                    speedStatus.textContent = '完成';
+                    speedStatus.className = 'status-value completed';
+                } else {
+                    speedStatus.textContent = '失败';
+                    speedStatus.className = 'status-value error';
+                    console.error('下载测试失败:', speedResult.reason);
+                }
+
+                // 更新进度
+                progressFill.style.width = '100%';
+                progressText.textContent = '综合测试完成！';
+
+            } catch (error) {
+                showError('综合测试失败: ' + error.message);
+            } finally {
+                // 恢复按钮状态
+                testButton.disabled = false;
+                testButton.innerHTML = '🚀 重新开始综合网络测试';
+            }
+        }
+
+        async function runLatencyTest() {
+            const latencyStatus = document.getElementById('latencyStatus');
+            latencyStatus.textContent = '测试中...';
+            latencyStatus.className = 'status-value running';
+            
+            const response = await fetch('/api/latency-test');
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || '时延测试失败');
+            }
+            
+            return data;
+        }
+
+        async function runSpeedTest() {
+            const speedStatus = document.getElementById('speedStatus');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            speedStatus.textContent = '测试中...';
+            speedStatus.className = 'status-value running';
+            
+            // 开始下载，传递文件大小参数
+            const response = await fetch(`/download?size=${selectedFileSize}`);
+            const reader = response.body.getReader();
+            const contentLength = parseInt(response.headers.get('content-length') || testInfo.file_size);
+
+            downloadStartTime = performance.now();
+            progressText.textContent = '正在下载...';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                
+                if (done) break;
+
+                downloadedBytes += value.length;
+                const progress = (downloadedBytes / contentLength) * 50; // 下载测试占50%进度
+                progressFill.style.width = progress + '%';
+                progressText.textContent = `下载中... ${progress.toFixed(1)}%`;
+
+                // 记录速度测量
+                const currentTime = performance.now();
+                if (downloadStartTime) {
+                    const elapsedTime = (currentTime - downloadStartTime) / 1000; // 转换为秒
+                    if (elapsedTime > 0) {
+                        const currentSpeed = downloadedBytes / elapsedTime;
+                        speedMeasurements.push(currentSpeed);
+                    }
+                }
+            }
+
+            downloadEndTime = performance.now();
+            const totalTime = (downloadEndTime - downloadStartTime) / 1000;
+            const averageSpeed = downloadedBytes / totalTime;
+            const peakSpeed = Math.max(...speedMeasurements);
+
+            return { totalTime, downloadedBytes, averageSpeed, peakSpeed };
+        }
+
+        function displayResults(totalTime, fileSize, averageSpeed, peakSpeed) {
+            const resultCard = document.getElementById('resultCard');
+            const speedDisplay = document.getElementById('speedDisplay');
+            const downloadTime = document.getElementById('downloadTime');
+            const fileSizeResult = document.getElementById('fileSizeResult');
+            const averageSpeedElement = document.getElementById('averageSpeed');
+            const peakSpeedElement = document.getElementById('peakSpeed');
+
+            speedDisplay.textContent = formatSpeed(averageSpeed);
+            downloadTime.textContent = formatTime(totalTime);
+            fileSizeResult.textContent = formatBytes(fileSize);
+            averageSpeedElement.textContent = formatSpeed(averageSpeed);
+            peakSpeedElement.textContent = formatSpeed(peakSpeed);
+
+            resultCard.style.display = 'block';
+        }
+
+        function displayLatencyResults(data) {
+            const latencyResultCard = document.getElementById('latencyResultCard');
+            const latencyDisplay = document.getElementById('latencyDisplay');
+            const testCount = document.getElementById('testCount');
+            const minLatency = document.getElementById('minLatency');
+            const maxLatency = document.getElementById('maxLatency');
+            const avgLatency = document.getElementById('avgLatency');
+            const medianLatency = document.getElementById('medianLatency');
+            const jitter = document.getElementById('jitter');
+
+            const stats = data.statistics;
+            
+            latencyDisplay.textContent = stats.avg + ' ms';
+            testCount.textContent = data.test_count + ' 次';
+            minLatency.textContent = stats.min + ' ms';
+            maxLatency.textContent = stats.max + ' ms';
+            avgLatency.textContent = stats.avg + ' ms';
+            medianLatency.textContent = stats.median + ' ms';
+            jitter.textContent = stats.jitter + ' ms';
+
+            latencyResultCard.style.display = 'block';
+            
+            console.log('时延测试结果:', data);
+        }
+    </script>
+</body>
+</html>
