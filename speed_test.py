@@ -30,9 +30,8 @@ FILE_SIZES: Dict[str, int] = {
 CHUNK_SIZE = 64 * 1024  # 64KB chunks for optimal streaming performance
 DEFAULT_SIZE = "50m"     # 默认文件大小
 
-# 时延测试配置
-LATENCY_TEST_SIZE = 1024  # 1KB for latency test
-LATENCY_TEST_COUNT = 5    # 测试次数
+# Ping测试配置
+PING_TEST_COUNT = 5    # ping测试次数
 
 
 def generate_random_data_stream(file_size: int) -> Generator[bytes, None, None]:
@@ -82,27 +81,17 @@ def get_file_size_info(file_size_key: str) -> Dict[str, Any]:
     }
 
 
-def generate_latency_test_data() -> bytes:
+def calculate_ping_stats(pings: List[float]) -> Dict[str, float]:
     """
-    生成用于时延测试的小数据包
-    
-    Returns:
-        bytes: 测试数据
-    """
-    return os.urandom(LATENCY_TEST_SIZE)
-
-
-def calculate_latency_stats(latencies: List[float]) -> Dict[str, float]:
-    """
-    计算时延统计信息
+    计算ping统计信息
     
     Args:
-        latencies: 时延列表（毫秒）
+        pings: ping时延列表（毫秒）
         
     Returns:
-        Dict: 时延统计信息
+        Dict: ping统计信息
     """
-    if not latencies:
+    if not pings:
         return {
             "min": 0,
             "max": 0,
@@ -111,27 +100,27 @@ def calculate_latency_stats(latencies: List[float]) -> Dict[str, float]:
             "jitter": 0
         }
     
-    latencies.sort()
-    min_latency = latencies[0]
-    max_latency = latencies[-1]
-    avg_latency = sum(latencies) / len(latencies)
+    pings.sort()
+    min_ping = pings[0]
+    max_ping = pings[-1]
+    avg_ping = sum(pings) / len(pings)
     
     # 计算中位数
-    n = len(latencies)
+    n = len(pings)
     if n % 2 == 0:
-        median_latency = (latencies[n//2-1] + latencies[n//2]) / 2
+        median_ping = (pings[n//2-1] + pings[n//2]) / 2
     else:
-        median_latency = latencies[n//2]
+        median_ping = pings[n//2]
     
     # 计算抖动（标准差）
-    variance = sum((x - avg_latency) ** 2 for x in latencies) / len(latencies)
+    variance = sum((x - avg_ping) ** 2 for x in pings) / len(pings)
     jitter = variance ** 0.5
     
     return {
-        "min": round(min_latency, 2),
-        "max": round(max_latency, 2),
-        "avg": round(avg_latency, 2),
-        "median": round(median_latency, 2),
+        "min": round(min_ping, 2),
+        "max": round(max_ping, 2),
+        "avg": round(avg_ping, 2),
+        "median": round(median_ping, 2),
         "jitter": round(jitter, 2)
     }
 
@@ -221,53 +210,6 @@ def get_file_sizes():
     
     logger.info(f"返回 {len(sizes)} 个文件大小选项")
     return jsonify({"sizes": sizes})
-
-
-@app.route("/api/latency-test")
-def latency_test():
-    """
-    时延测试API
-    
-    Returns:
-        JSON: 时延测试结果
-    """
-    logger.info("开始时延测试")
-    
-    latencies = []
-    test_times = []
-    
-    for i in range(LATENCY_TEST_COUNT):
-        start_time = time.time()
-        
-        # 生成测试数据
-        test_data = generate_latency_test_data()
-        
-        # 模拟网络传输时间（这里只是生成数据的时间）
-        end_time = time.time()
-        
-        latency_ms = (end_time - start_time) * 1000
-        latencies.append(latency_ms)
-        test_times.append({
-            "test": i + 1,
-            "latency": round(latency_ms, 2),
-            "timestamp": datetime.now().isoformat()
-        })
-    
-    # 计算统计信息
-    stats = calculate_latency_stats(latencies)
-    
-    result = {
-        "test_count": LATENCY_TEST_COUNT,
-        "test_size_bytes": LATENCY_TEST_SIZE,
-        "test_size_kb": round(LATENCY_TEST_SIZE / 1024, 2),
-        "latencies": latencies,
-        "test_details": test_times,
-        "statistics": stats,
-        "timestamp": datetime.now().isoformat()
-    }
-    
-    logger.info(f"时延测试完成: 平均 {stats['avg']}ms, 抖动 {stats['jitter']}ms")
-    return jsonify(result)
 
 
 @app.route("/api/ping")

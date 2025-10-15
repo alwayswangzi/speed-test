@@ -322,7 +322,7 @@
 
         <div class="test-buttons">
             <button class="test-button" id="testButton" onclick="startCombinedTest()">
-                🚀 开始综合网络测试
+                🚀 开始网络测试
             </button>
         </div>
 
@@ -335,8 +335,8 @@
 
         <div class="test-status" id="testStatus">
             <div class="status-item">
-                <span class="status-label">⏱️ 时延测试:</span>
-                <span class="status-value" id="latencyStatus">等待中...</span>
+                <span class="status-label">🏓 Ping测试:</span>
+                <span class="status-value" id="pingStatus">等待中...</span>
             </div>
             <div class="status-item">
                 <span class="status-label">📊 下载测试:</span>
@@ -367,32 +367,32 @@
             </div>
         </div>
 
-        <div class="result-card latency-card" id="latencyResultCard">
-            <h3>⏱️ 网络时延测试结果</h3>
-            <div class="latency-display" id="latencyDisplay"></div>
+        <div class="result-card latency-card" id="pingResultCard">
+            <h3>🏓 Ping测试结果</h3>
+            <div class="latency-display" id="pingDisplay"></div>
             <div class="result-item">
                 <span class="result-label">测试次数:</span>
-                <span class="result-value" id="testCount"></span>
+                <span class="result-value" id="pingTestCount"></span>
             </div>
             <div class="result-item">
-                <span class="result-label">最小时延:</span>
-                <span class="result-value" id="minLatency"></span>
+                <span class="result-label">最小延迟:</span>
+                <span class="result-value" id="minPing"></span>
             </div>
             <div class="result-item">
-                <span class="result-label">最大时延:</span>
-                <span class="result-value" id="maxLatency"></span>
+                <span class="result-label">最大延迟:</span>
+                <span class="result-value" id="maxPing"></span>
             </div>
             <div class="result-item">
-                <span class="result-label">平均时延:</span>
-                <span class="result-value" id="avgLatency"></span>
+                <span class="result-label">平均延迟:</span>
+                <span class="result-value" id="avgPing"></span>
             </div>
             <div class="result-item">
-                <span class="result-label">中位数时延:</span>
-                <span class="result-value" id="medianLatency"></span>
+                <span class="result-label">中位数延迟:</span>
+                <span class="result-value" id="medianPing"></span>
             </div>
             <div class="result-item">
                 <span class="result-label">网络抖动:</span>
-                <span class="result-value" id="jitter"></span>
+                <span class="result-value" id="pingJitter"></span>
             </div>
         </div>
     </div>
@@ -405,6 +405,7 @@
         let speedMeasurements = [];
         let selectedFileSize = '50m'; // 默认选择50MB
         let availableSizes = [];
+        let pingResults = []; // 存储ping测试结果
 
         // 页面加载时获取文件大小选项
         window.onload = function() {
@@ -543,25 +544,25 @@
             const progressContainer = document.getElementById('progressContainer');
             const testStatus = document.getElementById('testStatus');
             const resultCard = document.getElementById('resultCard');
-            const latencyResultCard = document.getElementById('latencyResultCard');
+            const pingResultCard = document.getElementById('pingResultCard');
             const progressFill = document.getElementById('progressFill');
             const progressText = document.getElementById('progressText');
-            const latencyStatus = document.getElementById('latencyStatus');
+            const pingStatus = document.getElementById('pingStatus');
             const speedStatus = document.getElementById('speedStatus');
 
             // 重置状态
             testButton.disabled = true;
-            testButton.innerHTML = '<span class="loading"></span>综合测试中...';
+            testButton.innerHTML = '<span class="loading"></span>网络测试中...';
             progressContainer.style.display = 'block';
             testStatus.style.display = 'block';
             resultCard.style.display = 'none';
-            latencyResultCard.style.display = 'none';
+            pingResultCard.style.display = 'none';
             progressFill.style.width = '0%';
-            progressText.textContent = '准备综合测试...';
+            progressText.textContent = '准备网络测试...';
             
             // 重置状态显示
-            latencyStatus.textContent = '等待中...';
-            latencyStatus.className = 'status-value';
+            pingStatus.textContent = '等待中...';
+            pingStatus.className = 'status-value';
             speedStatus.textContent = '等待中...';
             speedStatus.className = 'status-value';
 
@@ -570,27 +571,28 @@
             downloadEndTime = null;
             downloadedBytes = 0;
             speedMeasurements = [];
+            pingResults = [];
 
-            let latencyTestCompleted = false;
+            let pingTestCompleted = false;
             let speedTestCompleted = false;
 
             try {
                 // 同时开始两个测试
-                const latencyPromise = runLatencyTest();
+                const pingPromise = runPingTest();
                 const speedPromise = runSpeedTest();
 
                 // 等待两个测试完成
-                const [latencyResult, speedResult] = await Promise.allSettled([latencyPromise, speedPromise]);
+                const [pingResult, speedResult] = await Promise.allSettled([pingPromise, speedPromise]);
 
-                // 处理时延测试结果
-                if (latencyResult.status === 'fulfilled') {
-                    displayLatencyResults(latencyResult.value);
-                    latencyStatus.textContent = '完成';
-                    latencyStatus.className = 'status-value completed';
+                // 处理ping测试结果
+                if (pingResult.status === 'fulfilled') {
+                    displayPingResults(pingResult.value);
+                    pingStatus.textContent = '完成';
+                    pingStatus.className = 'status-value completed';
                 } else {
-                    latencyStatus.textContent = '失败';
-                    latencyStatus.className = 'status-value error';
-                    console.error('时延测试失败:', latencyResult.reason);
+                    pingStatus.textContent = '失败';
+                    pingStatus.className = 'status-value error';
+                    console.error('Ping测试失败:', pingResult.reason);
                 }
 
                 // 处理下载测试结果
@@ -607,30 +609,101 @@
 
                 // 更新进度
                 progressFill.style.width = '100%';
-                progressText.textContent = '综合测试完成！';
+                progressText.textContent = '网络测试完成！';
 
             } catch (error) {
-                showError('综合测试失败: ' + error.message);
+                showError('网络测试失败: ' + error.message);
             } finally {
                 // 恢复按钮状态
                 testButton.disabled = false;
-                testButton.innerHTML = '🚀 重新开始综合网络测试';
+                testButton.innerHTML = '🚀 重新开始网络测试';
             }
         }
 
-        async function runLatencyTest() {
-            const latencyStatus = document.getElementById('latencyStatus');
-            latencyStatus.textContent = '测试中...';
-            latencyStatus.className = 'status-value running';
+        async function runPingTest() {
+            const pingStatus = document.getElementById('pingStatus');
+            pingStatus.textContent = '测试中...';
+            pingStatus.className = 'status-value running';
             
-            const response = await fetch('/speed-test/api/latency-test');
-            const data = await response.json();
+            const pings = [];
+            const testCount = 5; // ping测试次数
             
-            if (!response.ok) {
-                throw new Error(data.error || '时延测试失败');
+            // 获取当前页面的主机名和端口
+            const hostname = window.location.hostname;
+            const port = window.location.port || (window.location.protocol === 'https:' ? '443' : '80');
+            const protocol = window.location.protocol;
+            const baseUrl = `${protocol}//${hostname}${port ? ':' + port : ''}`;
+            
+            console.log(`开始ping测试到: ${baseUrl}`);
+            
+            for (let i = 0; i < testCount; i++) {
+                try {
+                    const startTime = performance.now();
+                    const response = await fetch(`${baseUrl}/speed-test/api/ping`);
+                    const endTime = performance.now();
+                    
+                    if (response.ok) {
+                        const pingTime = endTime - startTime;
+                        pings.push(pingTime);
+                        console.log(`Ping ${i + 1}: ${pingTime.toFixed(2)}ms`);
+                    } else {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    
+                    // 短暂延迟避免过于频繁的请求
+                    if (i < testCount - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                } catch (error) {
+                    console.error(`Ping ${i + 1} 失败:`, error);
+                    throw new Error(`Ping测试失败: ${error.message}`);
+                }
             }
             
-            return data;
+            // 计算统计信息
+            const stats = calculatePingStats(pings);
+            
+            return {
+                test_count: testCount,
+                pings: pings,
+                statistics: stats,
+                timestamp: new Date().toISOString()
+            };
+        }
+        
+        function calculatePingStats(pings) {
+            if (!pings || pings.length === 0) {
+                return {
+                    min: 0,
+                    max: 0,
+                    avg: 0,
+                    median: 0,
+                    jitter: 0
+                };
+            }
+            
+            const sortedPings = [...pings].sort((a, b) => a - b);
+            const min = sortedPings[0];
+            const max = sortedPings[sortedPings.length - 1];
+            const avg = pings.reduce((sum, ping) => sum + ping, 0) / pings.length;
+            
+            // 计算中位数
+            const n = sortedPings.length;
+            const median = n % 2 === 0 
+                ? (sortedPings[n/2 - 1] + sortedPings[n/2]) / 2
+                : sortedPings[Math.floor(n/2)];
+            
+            // 计算抖动（标准差）
+            const variance = pings.reduce((sum, ping) => sum + Math.pow(ping - avg, 2), 0) / pings.length;
+            const jitter = Math.sqrt(variance);
+            
+            return {
+                min: Math.round(min * 100) / 100,
+                max: Math.round(max * 100) / 100,
+                avg: Math.round(avg * 100) / 100,
+                median: Math.round(median * 100) / 100,
+                jitter: Math.round(jitter * 100) / 100
+            };
         }
 
         async function runSpeedTest() {
@@ -695,29 +768,29 @@
             resultCard.style.display = 'block';
         }
 
-        function displayLatencyResults(data) {
-            const latencyResultCard = document.getElementById('latencyResultCard');
-            const latencyDisplay = document.getElementById('latencyDisplay');
-            const testCount = document.getElementById('testCount');
-            const minLatency = document.getElementById('minLatency');
-            const maxLatency = document.getElementById('maxLatency');
-            const avgLatency = document.getElementById('avgLatency');
-            const medianLatency = document.getElementById('medianLatency');
-            const jitter = document.getElementById('jitter');
+        function displayPingResults(data) {
+            const pingResultCard = document.getElementById('pingResultCard');
+            const pingDisplay = document.getElementById('pingDisplay');
+            const pingTestCount = document.getElementById('pingTestCount');
+            const minPing = document.getElementById('minPing');
+            const maxPing = document.getElementById('maxPing');
+            const avgPing = document.getElementById('avgPing');
+            const medianPing = document.getElementById('medianPing');
+            const pingJitter = document.getElementById('pingJitter');
 
             const stats = data.statistics;
             
-            latencyDisplay.textContent = stats.avg + ' ms';
-            testCount.textContent = data.test_count + ' 次';
-            minLatency.textContent = stats.min + ' ms';
-            maxLatency.textContent = stats.max + ' ms';
-            avgLatency.textContent = stats.avg + ' ms';
-            medianLatency.textContent = stats.median + ' ms';
-            jitter.textContent = stats.jitter + ' ms';
+            pingDisplay.textContent = stats.avg + ' ms';
+            pingTestCount.textContent = data.test_count + ' 次';
+            minPing.textContent = stats.min + ' ms';
+            maxPing.textContent = stats.max + ' ms';
+            avgPing.textContent = stats.avg + ' ms';
+            medianPing.textContent = stats.median + ' ms';
+            pingJitter.textContent = stats.jitter + ' ms';
 
-            latencyResultCard.style.display = 'block';
+            pingResultCard.style.display = 'block';
             
-            console.log('时延测试结果:', data);
+            console.log('Ping测试结果:', data);
         }
     </script>
 </body>
